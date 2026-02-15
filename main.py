@@ -10,7 +10,7 @@ h: int = 29
 error_correction_level: str = "L"
 data_mode: str = "byte mode"
 data_modeCode: str = "0100"
-repeat_bits: str = "11101100 000010001"
+repeat_bits = ["11101100", "00010001"]
 max_byte = 440 #55 bytes
 
 
@@ -83,25 +83,47 @@ class binOperation:
         return fullEightBitCount
     
     def get_dataToBin(self):
-        # dummy data for now, todo this
         # bin_data = convertToBin(self.data, self.mode)
-        bin_data = "10010100101010"
+        bin_data = "1001"
         return bin_data
     
     def get_fillRest(self):
-        return "1010101010"
+        max_bits = 440
+
+        base = (
+            self.get_modeCode()
+            + self.get_characterCount()
+            + self.get_dataToBin()
+        )
+
+        # Add terminator (up to 4 zeros), but don't pad to byte boundary
+        remaining = max_bits - len(base)
+        if remaining > 0:
+            terminator_size = min(4, remaining)
+            base += "0" * terminator_size
+
+        # Immediately start pad bytes - no byte boundary padding
+        pad_bytes = ["11101100", "00010001"]
+        i = 0
+        while len(base) < max_bits:
+            # If adding full byte would exceed, just take what we need
+            next_byte = pad_bytes[i % 2]
+            needed = max_bits - len(base)
+            base += next_byte[:needed]
+            i += 1
+
+        return base[:max_bits]
     
     def exportBinCode(self):
-        fullBinCode =  self.get_modeCode() + self.get_characterCount() + self.get_dataToBin() + self.get_fillRest()
-        return fullBinCode
-    
-
+        return self.get_fillRest()
 
 class QRCreateOperation:
     def __init__(self, grid, data: str):
         self.grid = grid
         self.reserved = np.zeros_like(grid, dtype=bool)
         self.data = data
+
+    #Constants
 
     def draw_finderPattern(self, start_row, start_col) -> None:
         # Draw 7x7 finder
@@ -191,13 +213,55 @@ class QRCreateOperation:
             self.grid[i, 8] = bits[(7 - dec)]
             self.reserved[8, i] = True
             self.reserved[i, 8] = True
-
             dec += 1
+    
+    #Variables
 
-    def draw_data(self):        
-        bincodeHelper = binOperation(self.data, "bm")
-        binCode = bincodeHelper.exportBinCode()
-        print(binCode)
+    def draw_data(self):
+        binHelper = binOperation(self.data, "bm")
+        binary_string = binHelper.exportBinCode()
+
+        bit_index = 0
+        size = len(self.grid)
+        col = size - 1  # Start from rightmost column
+        direction = -1  # -1 = moving up, +1 = moving down
+
+        while col > 0 and bit_index < len(binary_string):
+            # Skip the vertical timing column (column 6)
+            if col == 6:
+                col -= 1
+                continue
+
+            if direction == -1:
+                row_range = range(size - 1, -1, -1)  # Up
+            else:
+                row_range = range(0, size)  # Down
+
+            for row in row_range:
+                if bit_index >= len(binary_string):
+                    break
+
+                for c_offset in [0, 1]:  # Right column first, then left
+                    current_col = col - c_offset
+
+                    # Skip if out of bounds
+                    if current_col < 0:
+                        continue
+
+                    # Skip reserved areas
+                    if self.reserved[row, current_col]:
+                        continue
+                    
+                    # Place bit
+                    self.grid[row, current_col] = int(binary_string[bit_index])
+                    self.reserved[row, current_col] = bool(binary_string[bit_index])
+                    bit_index += 1
+
+                    if bit_index >= len(binary_string):
+                        break
+
+            col -= 2  # Move to next column pair
+            direction *= -1  # Flip direction
 
     def draw_ECC():
         pass
@@ -220,7 +284,7 @@ class QRCreateOperation:
 
 if __name__ == "__main__":
     grid = generateEmptyGrid()
-    helper = QRCreateOperation(grid, data="Hello")
+    helper = QRCreateOperation(grid, data="ab")
     QRgrid = helper.exportQRcodeGrid()
     generateQRImage(QRgrid, helper)
 
