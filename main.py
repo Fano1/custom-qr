@@ -2,8 +2,6 @@ import numpy as np
 from PIL import Image
 from typing import Any, Optional
 
-from streamlit import rerun
-
 #Constants
 
 QRcodeVersion: int = 3
