@@ -13,9 +13,25 @@ data_modeCode: str = "0100"
 def generateEmptyGrid():
     return np.zeros((w, h), dtype=np.uint8)
 
+def generate_format_string(ec_level_bits, mask_bits):
+    data = (ec_level_bits << 3) | mask_bits
+    data <<= 10
+
+    generator = 0b10100110111
+
+    for i in range(14, 9, -1):
+        if (data >> i) & 1:
+            data ^= generator << (i - 10)
+
+    remainder = data & 0b1111111111
+
+    format_bits = ((ec_level_bits << 3) | mask_bits) << 10 | remainder
+    format_bits ^= 0b101010000010010
+
+    return format_bits  # 15-bit integer
+
 def generateQRImage():
     pass
-
 
 #QR matrics operation
 
@@ -98,20 +114,20 @@ class QRCreateOperation:
         self.reserved[row, col] = True
 
     def draw_formatString(self):
-        bits = [int(b) for b in "1110111111000100"]  # 15 bits total
+        format_bits = generate_format_string(0b01, 0b000)  # L + mask 0
+        bits = [(format_bits >> i) & 1 for i in range(14, -1, -1)]
         tl = 8
         tr = 21
         dec = 0
 
-
         for i in range(tl + 1):
             self.grid[8, i] = bits[i]
-            self.grid[i, 8] = bits[15-i]
+            self.grid[i, 8] = bits[14-i]
             self.reserved[8, i] = True
             self.reserved[i, 8] = True
 
         for i in range(tr, tr+8):
-            self.grid[8, i] = bits[(8 + dec)]
+            self.grid[8, i] = bits[(7 + dec)]
             self.grid[i, 8] = bits[(7 - dec)]
             self.reserved[8, i] = True
             self.reserved[i, 8] = True
