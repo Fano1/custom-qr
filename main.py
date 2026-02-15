@@ -1,5 +1,8 @@
 import numpy as np
 from PIL import Image
+from typing import Any, Optional
+
+from streamlit import rerun
 
 #Constants
 
@@ -9,8 +12,11 @@ h: int = 29
 error_correction_level: str = "L"
 data_mode: str = "byte mode"
 data_modeCode: str = "0100"
+repeat_bits: str = "11101100 000010001"
+max_byte = 440 #55 bytes
 
-#Mappings
+
+#helper functions 
 def generateEmptyGrid():
     return np.zeros((w, h), dtype=np.uint8)
 
@@ -30,7 +36,6 @@ def generate_format_string(ec_level_bits, mask_bits):
     format_bits ^= 0b101010000010010
 
     return format_bits  # 15-bit integer
-
 
 def generateQRImage(QRgrid, helper):
     # Colors
@@ -57,7 +62,50 @@ def generateQRImage(QRgrid, helper):
     img.show()
 
 
-#QR matrics operation
+#QR matrics 
+def generateEightBitBIN(data: Optional[Any] , mode: str):
+    if mode.lower() == "bm":
+        return "0100"
+    
+    if mode.lower() == "cc":
+        con = np.binary_repr(len(data))
+        return "0"*len(con)
+    
+    if mode.lower() == "rb":
+        n = len()
+        return repeat_bits*()[n:]
+
+
+class binOperation: 
+    def __init__(self, data: Optional[Any], mode: str):
+        self.data = data
+        self.mode = mode
+
+    def get_modeCode(self): 
+        if self.mode == "numberic" or self.mode == "nm":
+            return "0001"
+        
+        if self.mode == "alphanumeric" or self.mode == "am":
+            return "0010"
+        
+        if self.mode == "byte" or self.mode == "bm":
+            return "0100"
+        
+    def get_characterCount(self):
+        bin_count = np.binary_repr(len(self.data))
+        fullEightBitCount = (8 - len(bin_count)) * "0" + bin_count
+        return fullEightBitCount
+    
+    def get_dataToBin(self):
+        #tell ayush shrestha to make this bit
+        bin_data = convertToBin(self.data, self.mode)
+        return bin_data
+    
+    def exportBinCode(self):
+        fullBinCode =  self.get_modeCode() + self.get_characterCount() + self.get_dataToBin() + self.get_fillRest()
+        return fullBinCode
+    
+
 
 class QRCreateOperation:
     def __init__(self, grid, data: str):
@@ -129,8 +177,6 @@ class QRCreateOperation:
             self.grid[i, 6] = (i + 1) % 2
             self.reserved[i, 6] = True
 
-
-
     def draw_darkPizel(self) -> None:
         row = 4 * QRcodeVersion + 9
         col = 8
@@ -159,9 +205,11 @@ class QRCreateOperation:
             dec += 1
 
     def draw_data(self):        
-        characterCount = bin(len(self.data))
+        bincodeHelper = binOperation(self.data, "bm")
+        binCode = bincodeHelper.exportBinCode()
+        print(binCode)
 
-    def draw_ECE():
+    def draw_ECC():
         pass
     
     def draw_QRcode(self):
@@ -172,6 +220,8 @@ class QRCreateOperation:
         self.draw_timingPattern()
         self.draw_formatString()
         self.draw_darkPizel()
+        self.draw_data()
+        # self.draw_ECC()
     
     def exportQRcodeGrid(self):
         self.draw_QRcode()
@@ -179,7 +229,6 @@ class QRCreateOperation:
     
 
 if __name__ == "__main__":
-
     grid = generateEmptyGrid()
     helper = QRCreateOperation(grid, data="Hello")
     QRgrid = helper.exportQRcodeGrid()
