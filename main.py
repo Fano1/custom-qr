@@ -61,18 +61,6 @@ def generateQRImage(QRgrid, helper):
 
 
 #QR matrics 
-def generateEightBitBIN(data: Optional[Any] , mode: str):
-    if mode.lower() == "bm":
-        return "0100"
-    
-    if mode.lower() == "cc":
-        con = np.binary_repr(len(data))
-        return "0"*len(con)
-    
-    if mode.lower() == "rb":
-        n = len()
-        return repeat_bits*()[n:]
-
 
 class binOperation: 
     def __init__(self, data: Optional[Any], mode: str):
@@ -95,9 +83,13 @@ class binOperation:
         return fullEightBitCount
     
     def get_dataToBin(self):
-        #tell ayush shrestha to make this bit
-        bin_data = convertToBin(self.data, self.mode)
+        # dummy data for now, todo this
+        # bin_data = convertToBin(self.data, self.mode)
+        bin_data = "10010100101010"
         return bin_data
+    
+    def get_fillRest(self):
+        return "1010101010"
     
     def exportBinCode(self):
         fullBinCode =  self.get_modeCode() + self.get_characterCount() + self.get_dataToBin() + self.get_fillRest()
