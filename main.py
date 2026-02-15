@@ -1,4 +1,5 @@
 import numpy as np
+from PIL import Image
 
 #Constants
 
@@ -30,8 +31,31 @@ def generate_format_string(ec_level_bits, mask_bits):
 
     return format_bits  # 15-bit integer
 
-def generateQRImage():
-    pass
+
+def generateQRImage(QRgrid, helper):
+    # Colors
+    BLACK = [0, 0, 0]         # Black for modules
+    WHITE = [255, 255, 255]   # White for reserved/structural areas
+    YELLOW = [255, 255, 0]    # Yellow for unused spaces
+
+    # Create RGB array
+    img_array_rgb = np.zeros((h, w, 3), dtype=np.uint8)
+
+    for r in range(h):
+        for c in range(w):
+            if QRgrid[r, c] == 1:
+                img_array_rgb[r, c] = BLACK
+            elif helper.reserved[r, c]:
+                img_array_rgb[r, c] = WHITE
+            else:
+                img_array_rgb[r, c] = YELLOW
+
+    # Scale up for visibility
+    scale = 10
+    img_array_rgb = np.kron(img_array_rgb, np.ones((scale, scale, 1), dtype=np.uint8))
+    img = Image.fromarray(img_array_rgb, mode='RGB')
+    img.show()
+
 
 #QR matrics operation
 
@@ -154,22 +178,11 @@ class QRCreateOperation:
         return self.grid
     
 
+if __name__ == "__main__":
 
-grid = generateEmptyGrid()
-helper = QRCreateOperation(grid, data="Hello")
-QRgrid = helper.exportQRcodeGrid()
-
-for r in range(h):
-    line = ""
-    for c in range(w):
-        if QRgrid[r, c] == 1:
-            line += "\033[41m  \033[0m"  # Red (black module)
-        else:
-            if helper.reserved[r, c]:
-                line += "\033[47m  \033[0m"  # White (reserved structural white)
-            else:
-                line += "\033[43m  \033[0m"  # Yellow (unassigned data space)
-    print(line)
-
+    grid = generateEmptyGrid()
+    helper = QRCreateOperation(grid, data="Hello")
+    QRgrid = helper.exportQRcodeGrid()
+    generateQRImage(QRgrid, helper)
 
 
